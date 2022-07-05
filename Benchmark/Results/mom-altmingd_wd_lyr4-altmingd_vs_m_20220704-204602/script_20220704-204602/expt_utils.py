@@ -235,18 +235,6 @@ def algos_vs_var_metrics(
 		writer = csv.writer(run_logs)
 		for var in var_list:
 			for algo, _ in algos_dict.items():
-				if list_var == 'd':
-					d =  var
-				elif list_var == 'r':
-					r =  var
-				elif list_var == 't':
-					t =  var
-				elif list_var == 'm':
-					m =  var
-				elif list_var == 'sigma':
-					sigma =  var
-				if limit_t:
-					t = get_t(m, d, r, rho)
 				writer.writerow([d, r, t, m, sigma, algo, path])
 	return metrics_list
 

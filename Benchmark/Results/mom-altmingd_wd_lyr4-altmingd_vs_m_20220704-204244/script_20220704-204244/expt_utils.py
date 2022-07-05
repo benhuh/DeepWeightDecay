@@ -26,10 +26,10 @@ def set_directories(dir_name, args = None, func = None, env_var = None):
 	dir_path = dir_name
 
 	hparams_dir = func.__name__
-	if True:
-		hparams_dir = "%s|d%s_r%s_t%s_m%s_sigma%s"%(hparams_dir, env_var[0], env_var[1], env_var[2], env_var[3], env_var[4])
+	if args:
 		for ks in args.keys():
-			hparams_dir = "%s|%s_%s"%(hparams_dir, str(ks), str(args[ks]))	
+			hparams_dir = "%s|%s_%s"%(hparams_dir, str(ks), str(args[ks]))
+			hparams_dir = "%s|d%s_r%s_t%s_m%s_sigma%s"%(hparams_dir, env_var[0], env_var[1], env_var[2], env_var[3], env_var[4])
 		temp_dir = os.path.join(dir_path, hparams_dir or 'default')
 		current_run = 0
 		while True:
@@ -235,18 +235,6 @@ def algos_vs_var_metrics(
 		writer = csv.writer(run_logs)
 		for var in var_list:
 			for algo, _ in algos_dict.items():
-				if list_var == 'd':
-					d =  var
-				elif list_var == 'r':
-					r =  var
-				elif list_var == 't':
-					t =  var
-				elif list_var == 'm':
-					m =  var
-				elif list_var == 'sigma':
-					sigma =  var
-				if limit_t:
-					t = get_t(m, d, r, rho)
 				writer.writerow([d, r, t, m, sigma, algo, path])
 	return metrics_list
 

@@ -1,6 +1,2 @@
-Run the following script files for generating the plots
-
-sigma_expts.py
-m_expts.py
-t_expts.py
-k_expts.py
+To generate runs use `python run_expt.py`. This will save runs to `./Results/`. 
+To visualize use `python vis.py -d 36 -r 4 -m 12 20 --rho 2 --loglog True`. Need to make sure that the corresponding experiments has been run and the path to the results are stored in `run_logs.csv`.
