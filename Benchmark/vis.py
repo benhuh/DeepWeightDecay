@@ -145,4 +145,5 @@ for metric in args.metrics:
         
     plt.show()
     plt.savefig(os.path.join("Results", plot_file_name+'.pdf'))
+    print("Saving to: %s"%(os.path.join("Results", plot_file_name+'.pdf')))
     plt.close()
