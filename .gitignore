@@ -28,6 +28,6 @@ Manuscript/iclr2022_style/Fewshot_ICLR.fdb_latexmk
 Manuscript/iclr2022_style/Fewshot_ICLR.fls
 Manuscript/iclr2022_style/Fewshot_ICLR.log
 Manuscript/Theory.tex
-./.vscode
-./Results
+.vscode/
+.gitignore
 *events
