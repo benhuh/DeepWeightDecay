@@ -1,7 +1,7 @@
 import torch
 from pdb import set_trace
 import numpy as np
-# from MTLR.MTLR_init import normalize
+from MTLR.MTLR_init import normalize
 ###########################
 
 
@@ -15,15 +15,21 @@ def measurements(W, grad_W, W0, l_train, l_test, l_W, weight_decay, W_norm, get_
     # factor = torch.tensor(eps)    # for W0_overlap = 0  -> constant loss (4)
     
     sig_threshold = 1e-6 #weight_decay #1e-6
-    trueloss =  get_true_loss2(W, W0, eps=eps_) 
-    testloss = test_mse_loss(W, W0, get_opt_V = get_opt_V)
-    surrogate_loss = get_surrogate_loss2(W, W0, sig_threshold)
-    lower_bound = get_true_loss_lower_bound(W, W0, eps=eps_)
-    
+    if W0 is not None:
+        trueloss =  get_true_loss2(W, W0, eps=eps_) 
+        testloss = test_mse_loss(W, W0, get_opt_V = get_opt_V).reshape(-1)
+        surrogate_loss = get_surrogate_loss2(W, W0, sig_threshold).item()/factor
+        lower_bound = get_true_loss_lower_bound(W, W0, eps=eps_)
+    else:
+        trueloss = None
+        testloss = None
+        surrogate_loss = None
+        lower_bound = None
+        
     # set_trace()
     losses = np.array([
                         # (trueloss.item() + lW_coeff*l_W)/factor, 
-                          surrogate_loss.item()/factor,
+                          surrogate_loss,
                           (l_train + lW_coeff*l_W )/factor,  #*W_norm**2, #
                           # (lower_bound.item() + lW_coeff*l_W)/factor, 
                           # l_W/factor,
@@ -218,8 +224,13 @@ def svd_analysis(W, W0, sig_prev = None, vec_prev = None):
         vec = vec.detach().numpy()
         # if sig_prev is not None: 
         #     sig, vec = track_SVD_order(sig, vec, sig_prev, vec_prev)
-        proj = W0 @ vec   
-        return sig, vec, proj, (proj**2).sum(dim=0).sqrt()
+        if W0 is not None:
+            proj = W0 @ vec   
+            proj_norm = (proj**2).sum(dim=0).sqrt()
+        else:
+            proj = None
+            proj_norm = torch.Tensor(0)
+        return sig, vec, proj, proj_norm
     except:
         return [0], 0, 0, 0
         

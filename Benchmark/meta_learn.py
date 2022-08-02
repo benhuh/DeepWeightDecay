@@ -162,29 +162,7 @@ class MetaLearnProb(object):
             'ir,dr->id', V, U)
         return ((regressors - regressors_est)**2).mean()
     def test_mse_loss(self, U, m = None, get_opt_V = None, t = None):
-        return 0
-        V_news = self.init_V(t)
-        # X, noise = self.generate_val_data(m, t = t)
-        # print(X.shape)
-        # print(self.U.shape)
-        # X = self.U.transpose()
-        # X = np.array([X] * t)
-        X = np.random.normal(size=[t, self.r, self.d])
-        y = np.einsum(
-            'ir,dr,ijd->ij', V_news, self.U, X)
-        # y = y + noise
-        X_t, y_t = self.get_torch_data(X, y)
-        if get_opt_V is not None:
-            V_est = get_opt_V(X_t, y_t)
-        else:
-            S = np.einsum('ijk,ijl->ikl', X, X)/self.r
-            V_est = update_V(U, self.U, V_news, S)
-        regressors = np.einsum(
-            'ir,dr->id', V_news, self.U)
-        regressors_est = np.einsum(
-            'ir,dr->id', V_est, U)
-        return ((regressors - regressors_est)**2).mean()
-
+        return 0 # not used anymore
         
     def get_torch_data(self, Xs, Ys):
         Xs = Xs.swapaxes(1, 2)

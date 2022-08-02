@@ -5,7 +5,14 @@ import torch
 
 from collections import defaultdict
 
-from MTLR_utils import set_seed_everywhere
+import sys
+from pathlib import Path # if you haven't already done so
+file = Path(__file__).resolve()
+parent, root = file.parent, file.parents[1]
+sys.path.append(str(root))
+
+
+from MTLR.MTLR_utils import set_seed_everywhere
 
 ##############
 

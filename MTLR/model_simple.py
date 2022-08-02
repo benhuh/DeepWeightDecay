@@ -26,7 +26,7 @@ class Multi_Linear(nn.Module):
             X = m(X)
         return  X
 
-    def evaluate(self, X, Y, weight_decay): 
+    def evaluate(self, X, Y, weight_decay):
         task_batch, Ny, x_batch = Y.shape
 
         X = self.forward(X)
@@ -41,7 +41,7 @@ class Multi_Linear(nn.Module):
         out = C @ X  #linear.apply(X, C) 
         loss = mse_loss(out, Y) #, reduction='sum')
         
-        loss += weight_decay*(C**2).sum()/task_batch 
+        loss += weight_decay*(C**2).sum()/task_batch
         return loss, C
     
     def adapt(self, X, Y, weight_decay): # returns C_opt
@@ -98,8 +98,6 @@ def outer_prod2(X, Y):
 
 # def some_prod(X, Y):
 #     return torch.einsum('tob,tox->txb', X, Y)
-
-
 
 ###############################################
 def pinv_eps(A, eps):  # epsilon regularized pinv

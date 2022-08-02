@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from torch.nn.utils import clip_grad_norm_  #, clip_grad_value_
+from torch.nn.functional import linear, mse_loss
 
 # from torch.linalg import pinv
 from measurements2 import measurements, svd_analysis, get_true_loss2 #, loss_True
@@ -23,7 +24,33 @@ def run_grad_descent(Ws, C, W0, Xs, Ys, T, history, lrs, momentum = (0,0),
                      device="cpu", 
                      optim_type = 'SGD',
                      epoch_div=1, epoch_div_factor=100, weight_decay_min=1e-6,
+                     Xe = None, Ye = None
                      ):
+    """run gradiant descent
+
+    Args:
+        Ws (torch.Tensor): model parameters
+        C (torch.Tensor): true task specific parameters
+        W0 (torch.Tensor): true representation parameters
+        Xs (torch.Tensor): training X
+        Ys (torch.Tensor): training Y
+        T (int): total steps
+        history (list): history recorder
+        lrs (tuple): learning rate e.g. (0.1, 0.1)
+        momentum (tuple, optional): _description_. Defaults to (0,0).
+        weight_decay (int, optional): _description_. Defaults to 0.
+        nuclear_decay (int, optional): _description_. Defaults to 0.
+        Optimize_C (bool, optional): _description_. Defaults to True.
+        clip_val (float, optional): _description_. Defaults to 0.1.
+        early_stop (bool, optional): _description_. Defaults to True.
+        device (str, optional): _description_. Defaults to "cpu".
+        optim_type (str, optional): _description_. Defaults to 'SGD'.
+        epoch_div (int, optional): _description_. Defaults to 1.
+        epoch_div_factor (int, optional): _description_. Defaults to 100.
+        weight_decay_min (_type_, optional): _description_. Defaults to 1e-6.
+        Xe (torch.Tensor, optional): validation dataset. Defaults to None.
+        Ye (torch.Tensor, optional): validation dataset. Defaults to None.
+    """
 
     lr_W, lr_C = lrs;    W_mom, C_mom = momentum;   lr_W*=(1-W_mom); lr_C*=(1-C_mom)
     clip_val = torch.tensor(clip_val)
@@ -31,7 +58,7 @@ def run_grad_descent(Ws, C, W0, Xs, Ys, T, history, lrs, momentum = (0,0),
     
     model = Multi_Linear(Ws, None if Optimize_C else C, Ny=1)
     model.to(device)
-    
+     
     optimizer = torch.optim.SGD if optim_type == 'SGD' else GroupRMSprop
 #     print(optim_type, optimizer)
 
@@ -39,15 +66,23 @@ def run_grad_descent(Ws, C, W0, Xs, Ys, T, history, lrs, momentum = (0,0),
         optim = optimizer(model.parameters(), lr=lr_W/model.num_layers, momentum=W_mom)     
     else:
         # lr_C = 4*lr_W;    C_mom = W_mom
-        optim = optimizer([{'params': model.module_list.parameters()}, {'params': model.C, 'lr': lr_C, 'momentum': C_mom}], lr=lr_W/model.num_layers, momentum=W_mom)     
+        optim = optimizer([{'params': model.module_list.parameters()}, {'params': model.C, 'lr': lr_C, 'momentum': C_mom}], lr=lr_W/model.num_layers, momentum=W_mom)
     
     for t in range(T):
         p = t*epoch_div//T
         wd = max(weight_decay/epoch_div_factor**p, weight_decay_min)
         optim.zero_grad()
         losses, grad_norm = train_step(model, history, Xs, Ys, wd, nuclear_decay, clip_val, W0)
+        if W0 is None:
+            l_test = test_evaluate(model, (Xe, None), (Ye, None), wd, 2)
+            l_train = test_evaluate(model, Xs, Ys, wd, 2)
+            # l_test, _ = evaluate(model, (Xe, None), (Ye, None), wd)
+            # l_train, _ = evaluate(model, Xs, Ys, wd)
+            
+            history['test_mse'].append(l_test.cpu().detach().clone().view(-1).numpy())
+            history['train_mse'].append(l_train.cpu().detach().clone().view(-1).numpy())
         
-        if early_stop and t>400: # and t>2*Dt:
+        if early_stop and t>400 and W0 is not None: # and t>2*Dt:
             termination_cond = get_termination_cond(history['losses'][t-Dt:], losses, Dt, threshold=1e-6)
             if termination_cond:
                 print('term_cond: surrogate_loss:', termination_cond)
@@ -62,6 +97,7 @@ def run_grad_descent(Ws, C, W0, Xs, Ys, T, history, lrs, momentum = (0,0),
 
 
 ###############################################
+    
 
 def train_step(model, history, Xs, Ys, weight_decay, nuclear_decay, clip_val, W0):
     W_norm=model.norm()
@@ -76,8 +112,18 @@ def train_step(model, history, Xs, Ys, weight_decay, nuclear_decay, clip_val, W0
     losses, grad_norm = record_history(history, model, C_opt, W0, l_train, l_W, weight_decay=weight_decay, W_norm=W_norm, clip_val_=clip_val)
     return losses, grad_norm
     
+def test_evaluate(model, Xs, Ys, weight_decay, r):
+    X_train, _ = Xs
+    Y_train, _ = Ys
+    # l_train, C_opt = model.evaluate(X_train[:, :, :(2*r)], Y_train[:, :, :(2*r)], weight_decay)
+    # out = C_opt @ X_train[:, :, (2*r):]  #linear.apply(X, C) 
+    # loss = mse_loss(out, Y_train[:, :, (2*r):]) #, reduction='sum')
+    l_train, C_opt = model.evaluate(X_train[:, :, :(2*r)], Y_train[:, :, :(2*r)], weight_decay)
+    out = C_opt @ model.forward(X_train[:, :, (2*r):])  #linear.apply(X, C) 
+    loss = mse_loss(out, Y_train[:, :, (2*r):]) #, reduction='sum')
+    return loss
     
-def evaluate(model, Xs, Ys, weight_decay): 
+def evaluate(model, Xs, Ys, weight_decay):
     X_train, X_test = Xs
     Y_train, Y_test = Ys
     
@@ -108,10 +154,10 @@ def record_history(history, model, C, W0, l_train, l_W, weight_decay, W_norm, cl
     
     losses, grad_norm, test_loss  = measurements(W, grad_W, W0, l_train.item(), 0, l_W.item(), weight_decay=weight_decay, W_norm=W_norm, get_opt_V = get_opt_V)
     
-    sig, vec, proj, proj_norm = svd_analysis(W.cpu(), W0.cpu(), None, None) 
+    sig, vec, proj, proj_norm = svd_analysis(W.cpu(), W0.cpu() if W0 is not None else W0, None, None) 
     
-    history['losses'].append(losses)      
-    history['test_loss'].append(test_loss.reshape(-1))
+    history['losses'].append(losses)
+    history['test_loss'].append(test_loss)
     history['C'].append(C.cpu().detach().clone().reshape(-1).numpy())
     history['W'].append(W.cpu().detach().clone().view(-1).numpy())
     # history['grad_norm'].append(torch.stack(grad_norm+[clip_val_]).cpu().detach().numpy())  

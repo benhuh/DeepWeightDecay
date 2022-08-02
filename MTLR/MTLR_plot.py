@@ -2,13 +2,21 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns    
+import seaborn as sns
 from pdb import set_trace
 
-##########    
+import sys
+from pathlib import Path # if you haven't already done so
+file = Path(__file__).resolve()
+parent, root = file.parent, file.parents[1]
+sys.path.append(str(root))
+
+from MTLR_init import base_task_batch
+
+##########
 def plot_all(history, *names, skip=10):  # def plot_all(loss_list, *args):
 #     names = ['losses'] + list(names)  # , 'err'
-    semilogy_list = ['losses', 'grad_norm', 'sing_val', 'test_loss'] #, 'proj_norm']
+    semilogy_list = ['losses', 'grad_norm', 'sing_val', 'test_loss', 'test_mse', 'train_mse'] #, 'proj_norm']
     print(names)
     i_max = len(names)
     fig, axes = plt.subplots(1, i_max, figsize=(6*i_max, 4), sharex=True, sharey=False)
@@ -225,8 +233,7 @@ def get_datalong(temp, skip=100, loss_type_num=3):
     df0 = pd.DataFrame({'_': array.flatten()}, index=index)
     data_long = df0.melt(ignore_index=False, value_name='value').reset_index()
     return data_long
-    
-from MTLR_init import base_task_batch
+
 
 def annotate_plot(data, **kws):
     # n = len(data)
